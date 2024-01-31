@@ -13,6 +13,7 @@ import com.ss.ugc.android.alpha_player.IMonitor
 import com.ss.ugc.android.alpha_player.IPlayerAction
 import com.ss.ugc.android.alpha_player.controller.IPlayerController
 import com.ss.ugc.android.alpha_player.controller.PlayerController
+import com.ss.ugc.android.alpha_player.model.AlphaVideoDirection
 import com.ss.ugc.android.alpha_player.model.AlphaVideoViewType
 import com.ss.ugc.android.alpha_player.model.Configuration
 import com.ss.ugc.android.alpha_player.model.DataSource
@@ -46,6 +47,7 @@ class VideoGiftView @JvmOverloads constructor(
         val configuration = Configuration(context, owner)
         //  GLTextureView supports custom display layer, but GLSurfaceView has better performance, and the GLSurfaceView is default.
         configuration.alphaVideoViewType = AlphaVideoViewType.GL_TEXTURE_VIEW
+        configuration.alphaVideoDirection = AlphaVideoDirection.BOTTOM
         //  You can implement your IMediaPlayer, here we use ExoPlayerImpl that implemented by ExoPlayer, and
         //  we support DefaultSystemPlayer as default player.
         mPlayerController = PlayerController.get(configuration, ExoPlayerImpl(context))
@@ -60,8 +62,11 @@ class VideoGiftView @JvmOverloads constructor(
             return
         }
         val configModel = JsonUtil.parseConfigModel(filePath)
+        configModel.landscapeItem?.path = "https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4"
+        configModel.portraitItem?.path = "https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4"
+//        configModel.landscapeItem?.path = "idle.mkv"
+//        configModel.portraitItem?.path = "idle.mkv"
         val dataSource = DataSource()
-            .setBaseDir(filePath)
             .setPortraitPath(configModel.portraitItem!!.path!!, configModel.portraitItem!!.alignMode)
             .setLandscapePath(configModel.landscapeItem!!.path!!, configModel.landscapeItem!!.alignMode)
             .setLooping(false)

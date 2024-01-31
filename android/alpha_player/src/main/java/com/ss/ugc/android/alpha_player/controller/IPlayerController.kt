@@ -13,6 +13,8 @@ interface IPlayerController {
 
     fun start(dataSource: DataSource)
 
+    fun play()
+
     fun pause()
 
     fun resume()

@@ -9,18 +9,12 @@ import java.io.File
  */
 class DataSource {
 
-    lateinit var baseDir: String
     lateinit var portPath: String
     lateinit var landPath: String
 
     var portScaleType: ScaleType? = null
     var landScaleType: ScaleType? = null
     var isLooping: Boolean = false
-
-    fun setBaseDir(baseDir: String): DataSource {
-        this.baseDir = if (baseDir.endsWith(File.separator)) baseDir else (baseDir + File.separator)
-        return this
-    }
 
     fun setPortraitPath(portraitPath: String, portraitScaleType: Int): DataSource {
         this.portPath = portraitPath
@@ -40,7 +34,7 @@ class DataSource {
     }
 
     fun getPath(orientation: Int): String {
-        return baseDir + (if (Configuration.ORIENTATION_PORTRAIT == orientation) portPath else landPath)
+        return if (Configuration.ORIENTATION_PORTRAIT == orientation) portPath else landPath
     }
 
     fun getScaleType(orientation: Int): ScaleType? {

@@ -19,10 +19,11 @@ import java.io.File
 class MainActivity : AppCompatActivity() {
 
     private val TAG = "MainActivity"
-    val basePath = Environment.getExternalStorageDirectory().absolutePath
+    lateinit var basePath:String
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        basePath = externalCacheDir!!.absolutePath
         setContentView(R.layout.activity_main)
 
         PermissionUtils.verifyStoragePermissions(this)
@@ -77,11 +78,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun getResourcePath(): String {
         val dirPath = basePath + File.separator + "alphaVideoGift" + File.separator
-        val dirFile = File(dirPath)
-        if (dirFile.exists() && dirFile.listFiles() != null && dirFile.listFiles().isNotEmpty()) {
-            return dirFile.listFiles()[0].absolutePath
-        }
-        return ""
+//        val dirFile = File(dirPath)
+//        if (dirFile.exists() && dirFile.listFiles() != null && dirFile.listFiles().isNotEmpty()) {
+//            return dirFile.listFiles()[0].absolutePath
+//        }
+        return dirPath
     }
 
     override fun onDestroy() {

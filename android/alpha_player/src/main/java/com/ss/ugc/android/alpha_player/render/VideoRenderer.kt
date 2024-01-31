@@ -6,6 +6,7 @@ import android.opengl.Matrix
 import android.os.Build
 import android.util.Log
 import android.view.Surface
+import com.ss.ugc.android.alpha_player.model.AlphaVideoDirection
 import com.ss.ugc.android.alpha_player.model.ScaleType
 import com.ss.ugc.android.alpha_player.utils.ShaderUtil
 import com.ss.ugc.android.alpha_player.utils.TextureCropUtil
@@ -21,7 +22,7 @@ import javax.microedition.khronos.opengles.GL10
 /**
  * created by dengzhuoyao on 2020/07/07
  */
-class VideoRenderer(val alphaVideoView: IAlphaVideoView) : IRender {
+class VideoRenderer(val alphaVideoView: IAlphaVideoView, private val alphaVideoDirection: AlphaVideoDirection) : IRender {
 
     private val TAG = "VideoRender"
 
@@ -43,6 +44,16 @@ class VideoRenderer(val alphaVideoView: IAlphaVideoView) : IRender {
         -1.0f, 1.0f, 0f, 0.5f, 1f,
         1.0f, 1.0f, 0f, 1f, 1f
     )
+
+    private var halfBottomData = floatArrayOf(
+        // X, Y, Z, U, V
+        -1.0f, -1.0f, 0f, 0f, 0.5f,
+        1.0f, -1.0f, 0f, 1f, 0.5f,
+        -1.0f, 1.0f, 0f, 0f, 1f,
+        1.0f, 1.0f, 0f, 1f, 1f
+    )
+
+    private var useVertData: FloatArray
 
     private var triangleVertices: FloatBuffer
 
@@ -70,9 +81,13 @@ class VideoRenderer(val alphaVideoView: IAlphaVideoView) : IRender {
     private var scaleType = ScaleType.ScaleAspectFill
 
     init {
-        triangleVertices = ByteBuffer.allocateDirect(halfRightVerticeData.size * FLOAT_SIZE_BYTES)
+        useVertData = when(alphaVideoDirection){
+            AlphaVideoDirection.LEFT, AlphaVideoDirection.TOP, AlphaVideoDirection.RIGHT-> halfRightVerticeData
+            AlphaVideoDirection.BOTTOM -> halfBottomData
+        }
+        triangleVertices = ByteBuffer.allocateDirect(useVertData.size * FLOAT_SIZE_BYTES)
             .order(ByteOrder.nativeOrder()).asFloatBuffer()
-        triangleVertices.put(halfRightVerticeData).position(0)
+        triangleVertices.put(useVertData).position(0)
         Matrix.setIdentityM(sTMatrix, 0)
     }
 
@@ -87,11 +102,11 @@ class VideoRenderer(val alphaVideoView: IAlphaVideoView) : IRender {
             return
         }
 
-        halfRightVerticeData = TextureCropUtil.calculateHalfRightVerticeData(scaleType,
+        val matrixVertData = TextureCropUtil.calculateHalfRightVerticeData(useVertData, scaleType,
             viewWidth, viewHeight, videoWidth, videoHeight)
-        triangleVertices = ByteBuffer.allocateDirect(halfRightVerticeData.size * FLOAT_SIZE_BYTES)
+        triangleVertices = ByteBuffer.allocateDirect(matrixVertData.size * FLOAT_SIZE_BYTES)
             .order(ByteOrder.nativeOrder()).asFloatBuffer()
-        triangleVertices.put(halfRightVerticeData).position(0)
+        triangleVertices.put(matrixVertData).position(0)
     }
 
     override fun setSurfaceListener(surfaceListener: IRender.SurfaceListener) {
@@ -271,8 +286,14 @@ class VideoRenderer(val alphaVideoView: IAlphaVideoView) : IRender {
      * @return programID If link program success, it will return program handle, else return 0.
      */
     private fun createProgram(): Int {
+        val fragmentAssetsPath = when(alphaVideoDirection) {
+            AlphaVideoDirection.LEFT -> "frag.sh"
+            AlphaVideoDirection.TOP -> "frag.sh"
+            AlphaVideoDirection.RIGHT -> "frag.sh"
+            AlphaVideoDirection.BOTTOM -> "frag_bottom.sh"
+        }
         val vertexSource = ShaderUtil.loadFromAssetsFile("vertex.sh", alphaVideoView.getView().resources)
-        val fragmentSource = ShaderUtil.loadFromAssetsFile("frag.sh", alphaVideoView.getView().resources)
+        val fragmentSource = ShaderUtil.loadFromAssetsFile(fragmentAssetsPath, alphaVideoView.getView().resources)
 
         val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexSource)
         if (vertexShader == 0) {

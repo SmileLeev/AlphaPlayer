@@ -9,6 +9,7 @@ import android.content.Context
 class Configuration(var context: Context,
                     var lifecycleOwner: LifecycleOwner) {
     var alphaVideoViewType: AlphaVideoViewType = AlphaVideoViewType.GL_SURFACE_VIEW
+    var alphaVideoDirection: AlphaVideoDirection = AlphaVideoDirection.LEFT
 }
 
 enum class AlphaVideoViewType {

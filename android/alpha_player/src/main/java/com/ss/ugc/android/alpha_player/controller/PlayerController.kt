@@ -18,6 +18,7 @@ import android.view.View
 import android.view.ViewGroup
 import com.ss.ugc.android.alpha_player.IMonitor
 import com.ss.ugc.android.alpha_player.IPlayerAction
+import com.ss.ugc.android.alpha_player.model.AlphaVideoDirection
 import com.ss.ugc.android.alpha_player.model.AlphaVideoViewType
 import com.ss.ugc.android.alpha_player.model.Configuration
 import com.ss.ugc.android.alpha_player.model.DataSource
@@ -34,11 +35,17 @@ import java.lang.Exception
 /**
  * created by dengzhuoyao on 2020/07/08
  */
-class PlayerController(val context: Context, owner: LifecycleOwner, val alphaVideoViewType: AlphaVideoViewType, mediaPlayer: IMediaPlayer): IPlayerControllerExt, LifecycleObserver, Handler.Callback {
+class PlayerController(
+    val context: Context,
+    owner: LifecycleOwner,
+    private val alphaVideoViewType: AlphaVideoViewType,
+    private val alphaVideoDirection: AlphaVideoDirection,
+    mediaPlayer: IMediaPlayer
+) : IPlayerControllerExt, LifecycleObserver, Handler.Callback {
 
     companion object {
         const val INIT_MEDIA_PLAYER: Int = 1
-        const val SET_DATA_SOURCE: Int =  2
+        const val SET_DATA_SOURCE: Int = 2
         const val START: Int = 3
         const val PAUSE: Int = 4
         const val RESUME: Int = 5
@@ -48,14 +55,17 @@ class PlayerController(val context: Context, owner: LifecycleOwner, val alphaVid
         const val RESET: Int = 9
 
         fun get(configuration: Configuration, mediaPlayer: IMediaPlayer? = null): PlayerController {
-            return PlayerController(configuration.context, configuration.lifecycleOwner,
+            return PlayerController(
+                configuration.context, configuration.lifecycleOwner,
                 configuration.alphaVideoViewType,
-                mediaPlayer ?: DefaultSystemPlayer())
+                configuration.alphaVideoDirection,
+                mediaPlayer ?: DefaultSystemPlayer()
+            )
         }
     }
 
     private var suspendDataSource: DataSource? = null
-    var isPlaying : Boolean = false
+    var isPlaying: Boolean = false
     var playerState = PlayerState.NOT_PREPARED
     var mMonitor: IMonitor? = null
     var mPlayerAction: IPlayerAction? = null
@@ -66,9 +76,9 @@ class PlayerController(val context: Context, owner: LifecycleOwner, val alphaVid
     val mainHandler: Handler = Handler(Looper.getMainLooper())
     var playThread: HandlerThread? = null
 
-    private val mPreparedListener = object: IMediaPlayer.OnPreparedListener {
+    private val mPreparedListener = object : IMediaPlayer.OnPreparedListener {
         override fun onPrepared() {
-            sendMessage(getMessage(START, null))
+            play()
         }
     }
 
@@ -94,17 +104,18 @@ class PlayerController(val context: Context, owner: LifecycleOwner, val alphaVid
     }
 
     private fun initAlphaView() {
-        alphaVideoView = when(alphaVideoViewType) {
+        alphaVideoView = when (alphaVideoViewType) {
             AlphaVideoViewType.GL_SURFACE_VIEW -> AlphaVideoGLSurfaceView(context, null)
             AlphaVideoViewType.GL_TEXTURE_VIEW -> AlphaVideoGLTextureView(context, null)
         }
         alphaVideoView.let {
             val layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT)
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
             it.setLayoutParams(layoutParams)
             it.setPlayerController(this)
-            it.setVideoRenderer(VideoRenderer(it))
+            it.setVideoRenderer(VideoRenderer(it, alphaVideoDirection))
         }
     }
 
@@ -187,6 +198,10 @@ class PlayerController(val context: Context, owner: LifecycleOwner, val alphaVid
         }
     }
 
+    override fun play() {
+        sendMessage(getMessage(START, null))
+    }
+
     override fun pause() {
         sendMessage(getMessage(PAUSE, null))
     }
@@ -245,11 +260,44 @@ class PlayerController(val context: Context, owner: LifecycleOwner, val alphaVid
     @WorkerThread
     private fun setDataSource(dataSource: DataSource) {
         try {
-            setVideoFromFile(dataSource)
+            val portPath = dataSource.portPath
+            if (portPath.startsWith("http://") || portPath.startsWith("https://")) {
+                setVideoFromNet(dataSource)
+            } else {
+                setVideoFromFile(dataSource)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
-            monitor(false, errorInfo = "alphaVideoView set dataSource failure: " + Log.getStackTraceString(e))
+            monitor(
+                false,
+                errorInfo = "alphaVideoView set dataSource failure: " + Log.getStackTraceString(e)
+            )
             emitEndSignal()
+        }
+    }
+
+    private fun setVideoFromNet(dataSource: DataSource) {
+        mediaPlayer.reset()
+        playerState = PlayerState.NOT_PREPARED
+        val orientation = context.resources.configuration.orientation
+        val isPort = android.content.res.Configuration.ORIENTATION_PORTRAIT == orientation
+        val dataPath =
+            (if (isPort) dataSource.portPath else dataSource.landPath)
+        val scaleType = dataSource.getScaleType(orientation)
+        if (TextUtils.isEmpty(dataPath)) {
+            monitor(false, errorInfo = "dataPath is empty or File is not exists. path = $dataPath")
+            emitEndSignal()
+            return
+        }
+        scaleType?.let {
+            alphaVideoView.setScaleType(it)
+        }
+        mediaPlayer.setLooping(dataSource.isLooping)
+        mediaPlayer.setDataSource(dataPath)
+        if (alphaVideoView.isSurfaceCreated()) {
+            prepareAsync()
+        } else {
+            suspendDataSource = dataSource
         }
     }
 
@@ -261,7 +309,7 @@ class PlayerController(val context: Context, owner: LifecycleOwner, val alphaVid
 
         val dataPath = dataSource.getPath(orientation)
         val scaleType = dataSource.getScaleType(orientation)
-        if (TextUtils.isEmpty(dataPath) || !File(dataPath).exists()) {
+        if (TextUtils.isEmpty(dataPath)) {
             monitor(false, errorInfo = "dataPath is empty or File is not exists. path = $dataPath")
             emitEndSignal()
             return
@@ -281,7 +329,7 @@ class PlayerController(val context: Context, owner: LifecycleOwner, val alphaVid
     @WorkerThread
     private fun handleSuspendedEvent() {
         suspendDataSource?.let {
-            setVideoFromFile(it)
+            setDataSource(it)
         }
         suspendDataSource = null
     }
@@ -309,10 +357,12 @@ class PlayerController(val context: Context, owner: LifecycleOwner, val alphaVid
                     mPlayerAction?.startAction()
                 }
             }
+
             PlayerState.PAUSED -> {
                 mediaPlayer.start()
                 playerState = PlayerState.STARTED
             }
+
             PlayerState.NOT_PREPARED, PlayerState.STOPPED -> {
                 try {
                     prepareAsync()
@@ -328,63 +378,81 @@ class PlayerController(val context: Context, owner: LifecycleOwner, val alphaVid
     @WorkerThread
     private fun parseVideoSize() {
         val videoInfo = mediaPlayer.getVideoInfo()
-        alphaVideoView.measureInternal((videoInfo.videoWidth / 2).toFloat(), videoInfo.videoHeight.toFloat())
+        val halfWidth = when (alphaVideoDirection) {
+            AlphaVideoDirection.LEFT, AlphaVideoDirection.RIGHT -> true
+            AlphaVideoDirection.TOP, AlphaVideoDirection.BOTTOM -> false
+        }
+        val videoWidth = if (halfWidth) videoInfo.videoWidth / 2 else videoInfo.videoWidth
+        val videoHeight = if (halfWidth) videoInfo.videoHeight else videoInfo.videoHeight / 2
+        alphaVideoView.measureInternal((videoWidth).toFloat(), (videoHeight).toFloat())
 
         val scaleType = alphaVideoView.getScaleType()
         mainHandler.post {
-            mPlayerAction?.onVideoSizeChanged(videoInfo.videoWidth / 2, videoInfo.videoHeight, scaleType)
+            mPlayerAction?.onVideoSizeChanged(videoWidth, videoHeight, scaleType)
         }
     }
 
     override fun handleMessage(msg: Message?): Boolean {
         msg?.let {
-            when(msg.what) {
+            when (msg.what) {
                 INIT_MEDIA_PLAYER -> {
                     initPlayer()
                 }
+
                 SURFACE_PREPARED -> {
                     val surface = msg.obj as Surface
                     mediaPlayer.setSurface(surface)
                     handleSuspendedEvent()
                 }
+
                 SET_DATA_SOURCE -> {
                     val dataSource = msg.obj as DataSource
                     setDataSource(dataSource)
                 }
+
                 START -> {
                     try {
                         parseVideoSize()
                         playerState = PlayerState.PREPARED
                         startPlay()
                     } catch (e: Exception) {
-                        monitor(false, errorInfo = "start video failure: " + Log.getStackTraceString(e))
+                        monitor(
+                            false,
+                            errorInfo = "start video failure: " + Log.getStackTraceString(e)
+                        )
                         emitEndSignal()
                     }
                 }
+
                 PAUSE -> {
                     when (playerState) {
                         PlayerState.STARTED -> {
                             mediaPlayer.pause()
                             playerState = PlayerState.PAUSED
                         }
+
                         else -> {}
                     }
                 }
+
                 RESUME -> {
                     if (isPlaying) {
                         startPlay()
                     } else {
                     }
                 }
+
                 STOP -> {
                     when (playerState) {
                         PlayerState.STARTED, PlayerState.PAUSED -> {
                             mediaPlayer.pause()
                             playerState = PlayerState.PAUSED
                         }
+
                         else -> {}
                     }
                 }
+
                 DESTROY -> {
                     alphaVideoView.onPause()
                     if (playerState == PlayerState.STARTED) {
@@ -404,11 +472,13 @@ class PlayerController(val context: Context, owner: LifecycleOwner, val alphaVid
                         it.interrupt()
                     }
                 }
+
                 RESET -> {
                     mediaPlayer.reset()
                     playerState = PlayerState.NOT_PREPARED
                     isPlaying = false
                 }
+
                 else -> {}
             }
         }
