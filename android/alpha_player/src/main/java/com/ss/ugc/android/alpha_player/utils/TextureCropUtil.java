@@ -10,10 +10,12 @@ import java.util.Arrays;
  */
 public class TextureCropUtil {
 
-    public static float[] calculateHalfRightVerticeData(float[] verticeData, ScaleType scaleType,
+    public static float[][] calculateHalfRightVerticeData(float[] verticeData,float[] textureCoord,ScaleType scaleType,
                                                         float viewWidth, float viewHeight,
                                                         float videoWidth, float videoHeight) {
-        float[] result = Arrays.copyOf(verticeData, verticeData.length);
+        float[][] result = new float[3][];
+        result[0] = Arrays.copyOf(verticeData, verticeData.length);
+        result[1] = Arrays.copyOf(textureCoord, textureCoord.length);
         float currentRatio = viewWidth / viewHeight;
         float videoRatio = videoWidth / videoHeight;
         float ratioX, ratioY;
@@ -50,7 +52,7 @@ public class TextureCropUtil {
                     ratioX = 0;
                     ratioY = (1 - (videoHeight / viewHeight)) / 2;
                 }
-                result = getZoomData(result, ratioX, ratioY, ratioX, ratioY);
+                getZoomData(result[0], ratioX, ratioY, ratioX, ratioY);
                 break;
             case ScaleAspectFill:
                 //  等比例缩放铺满全屏，裁剪视频多余部分
@@ -58,63 +60,63 @@ public class TextureCropUtil {
                 rightRatio = ratioX;
                 topRatio = ratioY;
                 bottomRatio = ratioY;
-                result = getCropData(result, leftRatio, topRatio, rightRatio, bottomRatio);
+                getCropData(result[1], leftRatio, topRatio, rightRatio, bottomRatio);
                 break;
             case TopFill:
                 leftRatio = ratioX;
                 rightRatio = ratioX;
                 topRatio = 0;
                 bottomRatio = ratioY * 2;
-                result = getCropData(result, leftRatio, topRatio, rightRatio, bottomRatio);
+                getCropData(result[1], leftRatio, topRatio, rightRatio, bottomRatio);
                 break;
             case BottomFill:
                 leftRatio = ratioX;
                 rightRatio = ratioX;
                 topRatio = ratioY * 2;
                 bottomRatio = 0;
-                result = getCropData(result, leftRatio, topRatio, rightRatio, bottomRatio);
+                getCropData(result[1], leftRatio, topRatio, rightRatio, bottomRatio);
                 break;
             case LeftFill:
                 leftRatio = 0;
                 rightRatio = ratioX * 2;
                 topRatio = ratioY;
                 bottomRatio = ratioY;
-                result = getCropData(result, leftRatio, topRatio, rightRatio, bottomRatio);
+                getCropData(result[1], leftRatio, topRatio, rightRatio, bottomRatio);
                 break;
             case RightFill:
                 leftRatio = ratioX * 2;
                 rightRatio = 0;
                 topRatio = ratioY;
                 bottomRatio = ratioY;
-                result = getCropData(result, leftRatio, topRatio, rightRatio, bottomRatio);
+                getCropData(result[1], leftRatio, topRatio, rightRatio, bottomRatio);
                 break;
             case TopFit:
                 // 宽度缩放到viewWidth，计算底部留空位置
                 videoWidth = viewWidth;
                 videoHeight = videoWidth / videoRatio;
                 ratioY = (1 - (videoHeight / viewHeight)) / 2;
-                result = getZoomData(result, 0, 0, 0, ratioY * 2);
+                getZoomData(result[0], 0, 0, 0, ratioY * 2);
                 break;
             case BottomFit:
                 // 宽度缩放到viewWidth，计算顶部留空位置
                 videoWidth = viewWidth;
                 videoHeight = videoWidth / videoRatio;
                 ratioY = (1 - (videoHeight / viewHeight)) / 2;
-                result = getZoomData(result, 0, ratioY * 2, 0, 0);
+                getZoomData(result[0], 0, ratioY * 2, 0, 0);
                 break;
             case LeftFit:
                 // 高度缩放到viewHeight，计算右边留空位置
                 videoHeight = viewHeight;
                 videoWidth = videoHeight * videoRatio;
                 ratioX = (1 - (videoWidth / viewWidth)) / 2;
-                result = getZoomData(result, 0, 0, ratioX * 2, 0);
+                getZoomData(result[0], 0, 0, ratioX * 2, 0);
                 break;
             case RightFit:
                 // 高度缩放到viewHeight，计算左边留空位置
                 videoHeight = viewHeight;
                 videoWidth = videoHeight * videoRatio;
                 ratioX = (1 - (videoWidth / viewWidth)) / 2;
-                result = getZoomData(result, ratioX * 2, 0, 0, 0);
+                getZoomData(result[0], ratioX * 2, 0, 0, 0);
                 break;
             default:
                 //  全屏拉伸铺满
@@ -122,7 +124,7 @@ public class TextureCropUtil {
                 rightRatio = 0;
                 topRatio = 0;
                 bottomRatio = 0;
-                result = getCropData(result, leftRatio, topRatio, rightRatio, bottomRatio);
+                getCropData(result[1], leftRatio, topRatio, rightRatio, bottomRatio);
                 break;
         }
 
@@ -130,7 +132,7 @@ public class TextureCropUtil {
     }
 
     private static float[] getZoomData(float[] verticeData, float leftZoomRatio, float topZoomRatio, float rightZoomRatio, float bottomZoomRatio) {
-        int lineCount = 5;
+        int lineCount = 2;
         verticeData[0] += leftZoomRatio * 2;
         verticeData[1] += bottomZoomRatio * 2;
         verticeData[lineCount] -= rightZoomRatio * 2;
@@ -149,17 +151,17 @@ public class TextureCropUtil {
 //        };
     }
 
-    private static float[] getCropData(float[] verticeData, float leftCropRatio, float topCropRatio, float rightCropRatio, float bottomCropRatio) {
-        int lineCount = 5;
-        verticeData[3] += leftCropRatio / 2;
-        verticeData[4] += bottomCropRatio;
-        verticeData[lineCount+3] -= rightCropRatio / 2;
-        verticeData[lineCount+4] += bottomCropRatio;
-        verticeData[lineCount*2+3] += leftCropRatio / 2;
-        verticeData[lineCount*2+4] -= topCropRatio;
-        verticeData[lineCount*3+3] -= rightCropRatio / 2;
-        verticeData[lineCount*3+4] -= topCropRatio;
-        return verticeData;
+    private static void getCropData(float[] textureCoord,float leftCropRatio, float topCropRatio, float rightCropRatio, float bottomCropRatio) {
+        int lineCount = 2;
+        textureCoord[0] += leftCropRatio / 2;
+        textureCoord[1] += bottomCropRatio;
+        textureCoord[lineCount] -= rightCropRatio / 2;
+        textureCoord[lineCount+1] += bottomCropRatio;
+        textureCoord[lineCount*2] += leftCropRatio / 2;
+        textureCoord[lineCount*2+1] -= topCropRatio;
+        textureCoord[lineCount*3] -= rightCropRatio / 2;
+        textureCoord[lineCount*3+1] -= topCropRatio;
+        
 //        return new float[] {
 //                // X, Y, Z, U, V
 //                -1.0f,  -1.0f,  0, 0.5f + leftCropRatio / 2,    0.f + bottomCropRatio,

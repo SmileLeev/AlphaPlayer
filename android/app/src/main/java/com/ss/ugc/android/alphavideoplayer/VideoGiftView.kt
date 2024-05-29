@@ -17,6 +17,7 @@ import com.ss.ugc.android.alpha_player.model.AlphaVideoDirection
 import com.ss.ugc.android.alpha_player.model.AlphaVideoViewType
 import com.ss.ugc.android.alpha_player.model.Configuration
 import com.ss.ugc.android.alpha_player.model.DataSource
+import com.ss.ugc.android.alphavideoplayer.model.ConfigModel
 import com.ss.ugc.android.alphavideoplayer.player.ExoPlayerImpl
 import com.ss.ugc.android.alphavideoplayer.utils.JsonUtil
 
@@ -61,11 +62,15 @@ class VideoGiftView @JvmOverloads constructor(
         if (TextUtils.isEmpty(filePath)) {
             return
         }
-        val configModel = JsonUtil.parseConfigModel(filePath)
-        configModel.landscapeItem?.path = "https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4"
-        configModel.portraitItem?.path = "https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4"
-//        configModel.landscapeItem?.path = "idle.mkv"
-//        configModel.portraitItem?.path = "idle.mkv"
+        val configModel = ConfigModel()
+        configModel.landscapeItem = ConfigModel.Item().apply {
+            path = "/sdcard/merge.mp4"
+            alignMode = 1
+        }
+        configModel.portraitItem = ConfigModel.Item().apply {
+            path = "/sdcard/merge.mp4"
+            alignMode = 1
+        }
         val dataSource = DataSource()
             .setPortraitPath(configModel.portraitItem!!.path!!, configModel.portraitItem!!.alignMode)
             .setLandscapePath(configModel.landscapeItem!!.path!!, configModel.landscapeItem!!.alignMode)
