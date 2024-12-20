@@ -1,16 +1,14 @@
 package com.ss.ugc.android.alphavideoplayer
 
-import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
-import android.os.Environment
 import android.util.Log
 import android.view.View
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import com.ss.ugc.android.alpha_player.IMonitor
 import com.ss.ugc.android.alpha_player.IPlayerAction
 import com.ss.ugc.android.alpha_player.model.ScaleType
 import com.ss.ugc.android.alphavideoplayer.utils.PermissionUtils
-import kotlinx.android.synthetic.main.activity_main.*
 import java.io.File
 
 /**
@@ -20,18 +18,20 @@ class MainActivity : AppCompatActivity() {
 
     private val TAG = "MainActivity"
     lateinit var basePath:String
+    lateinit var video_gift_view: VideoGiftView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         basePath = externalCacheDir!!.absolutePath
         setContentView(R.layout.activity_main)
+        video_gift_view = findViewById(R.id.video_gift_view)
 
         PermissionUtils.verifyStoragePermissions(this)
         initVideoGiftView()
     }
 
     private fun initVideoGiftView() {
-        video_gift_view.initPlayerController(this, this, playerAction, monitor)
+        findViewById<VideoGiftView>(R.id.video_gift_view).initPlayerController(this, this, playerAction, monitor)
     }
 
     private val playerAction = object : IPlayerAction {

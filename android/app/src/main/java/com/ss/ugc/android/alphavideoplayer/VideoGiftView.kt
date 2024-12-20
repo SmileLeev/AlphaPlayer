@@ -1,6 +1,6 @@
 package com.ss.ugc.android.alphavideoplayer
 
-import android.arch.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleOwner
 import android.content.Context
 import android.text.TextUtils
 import android.util.AttributeSet
@@ -64,11 +64,11 @@ class VideoGiftView @JvmOverloads constructor(
         }
         val configModel = ConfigModel()
         configModel.landscapeItem = ConfigModel.Item().apply {
-            path = "/sdcard/merge.mp4"
+            path = "asset:///merge.mp4"
             alignMode = 1
         }
         configModel.portraitItem = ConfigModel.Item().apply {
-            path = "/sdcard/merge.mp4"
+            path = "asset:///merge.mp4"
             alignMode = 1
         }
         val dataSource = DataSource()

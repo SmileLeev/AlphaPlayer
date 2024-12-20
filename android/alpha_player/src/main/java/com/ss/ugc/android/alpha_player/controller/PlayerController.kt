@@ -1,21 +1,21 @@
 package com.ss.ugc.android.alpha_player.controller
 
-import android.arch.lifecycle.Lifecycle
-import android.arch.lifecycle.LifecycleObserver
-import android.arch.lifecycle.LifecycleOwner
-import android.arch.lifecycle.OnLifecycleEvent
 import android.content.Context
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.os.Message
 import android.os.Process
-import android.support.annotation.WorkerThread
 import android.text.TextUtils
 import android.util.Log
 import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
+import androidx.annotation.WorkerThread
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.OnLifecycleEvent
 import com.ss.ugc.android.alpha_player.IMonitor
 import com.ss.ugc.android.alpha_player.IPlayerAction
 import com.ss.ugc.android.alpha_player.model.AlphaVideoDirection
@@ -372,6 +372,9 @@ class PlayerController(
                     emitEndSignal()
                 }
             }
+
+            PlayerState.STARTED ->{}
+            PlayerState.RELEASE ->{}
         }
     }
 
@@ -392,8 +395,8 @@ class PlayerController(
         }
     }
 
-    override fun handleMessage(msg: Message?): Boolean {
-        msg?.let {
+    override fun handleMessage(msg: Message): Boolean {
+        msg.let {
             when (msg.what) {
                 INIT_MEDIA_PLAYER -> {
                     initPlayer()
@@ -495,4 +498,5 @@ class PlayerController(
     private fun monitor(state: Boolean, what: Int = 0, extra: Int = 0, errorInfo: String) {
         mMonitor?.monitor(state, getPlayerType(), what, extra, errorInfo)
     }
+
 }

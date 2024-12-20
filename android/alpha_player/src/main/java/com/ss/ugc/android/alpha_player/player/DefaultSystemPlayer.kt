@@ -96,9 +96,11 @@ class DefaultSystemPlayer : AbsPlayer() {
             throw Exception("DefaultSystemPlayer get metadata failure!")
         }
 
-        val videoWidth = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH).toInt()
-        val videoHeight = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT).toInt()
-
+        val videoWidth = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toInt()
+        val videoHeight = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toInt()
+        if (videoWidth == null || videoHeight == null) {
+            throw Exception("videoWidth=$videoWidth videoHeight=$videoHeight, extractMetadata failed!")
+        }
         return VideoInfo(videoWidth, videoHeight)
     }
 

@@ -2,7 +2,8 @@ package com.ss.ugc.android.alphavideoplayer.utils;
 
 import android.app.Activity;
 import android.content.pm.PackageManager;
-import android.support.v4.app.ActivityCompat;
+
+import androidx.core.app.ActivityCompat;
 
 /**
  * Created by bstonl on 2018/9/20.

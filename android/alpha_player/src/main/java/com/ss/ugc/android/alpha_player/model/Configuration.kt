@@ -1,6 +1,6 @@
 package com.ss.ugc.android.alpha_player.model
 
-import android.arch.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleOwner
 import android.content.Context
 
 /**
