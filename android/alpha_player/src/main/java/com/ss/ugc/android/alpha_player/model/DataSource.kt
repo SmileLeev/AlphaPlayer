@@ -2,12 +2,11 @@ package com.ss.ugc.android.alpha_player.model
 
 import android.content.res.Configuration
 import android.text.TextUtils
-import java.io.File
 
 /**
  * created by dengzhuoyao on 2020/07/07
  */
-class DataSource {
+open class DataSource {
 
     lateinit var portPath: String
     lateinit var landPath: String
@@ -41,7 +40,7 @@ class DataSource {
         return if (Configuration.ORIENTATION_PORTRAIT == orientation) portScaleType else landScaleType
     }
 
-    fun isValid(): Boolean {
+    open fun isValid(): Boolean {
         return !TextUtils.isEmpty(portPath) && !TextUtils.isEmpty(landPath) && portScaleType != null && landScaleType != null
     }
 }

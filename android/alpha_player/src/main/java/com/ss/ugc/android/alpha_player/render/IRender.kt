@@ -40,7 +40,7 @@ interface IRender : GLTextureView.Renderer, GLSurfaceView.Renderer, SurfaceTextu
         /**
          * Called when Surface is prepared.
          */
-        fun onSurfacePrepared(surface: Surface)
+        fun onSurfacePrepared(surface: Surface, index: Int)
 
         /**
          * Called when Surface is Destroyed.

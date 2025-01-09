@@ -17,14 +17,41 @@
         app:layout_constraintTop_toTopOf="parent"/>
 
     <Button
-        android:id="@+id/start_btn"
+        android:id="@+id/prepare_btn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="start"
-        android:onClick="playGift"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:text="prepare"
+        android:onClick="prepareGift"
+        android:layout_marginLeft="10dp"
+        app:layout_constraintStart_toEndOf="@id/attach_btn"
         app:layout_constraintTop_toTopOf="parent"/>
+
+    <Button
+        android:id="@+id/play_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:enabled="false"
+        android:text="play"
+        android:onClick="playGift"
+        app:layout_constraintStart_toEndOf="@id/prepare_btn"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+
+    <Button
+        android:id="@+id/seek_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="seek"
+        android:onClick="seekGift"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/attach_btn" />
+
+    <SeekBar
+        android:id="@+id/seek_bar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/seek_btn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
 
     <Button
         android:id="@+id/detach_btn"

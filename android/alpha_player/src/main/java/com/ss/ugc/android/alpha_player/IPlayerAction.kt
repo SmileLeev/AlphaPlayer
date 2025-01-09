@@ -19,7 +19,7 @@ interface IPlayerAction {
     fun onVideoSizeChanged(videoWidth: Int, videoHeight: Int, scaleType: ScaleType)
 
     /**
-     * Called when the media source is ready to start.
+     * Called when the media source is start.
      */
     fun startAction()
 
@@ -27,4 +27,9 @@ interface IPlayerAction {
      * Called when the end of a media source is reached during playback.
      */
     fun endAction()
+
+    /**
+     * Called when the media source is prepared to play.
+     */
+    fun mediaPrepared()
 }

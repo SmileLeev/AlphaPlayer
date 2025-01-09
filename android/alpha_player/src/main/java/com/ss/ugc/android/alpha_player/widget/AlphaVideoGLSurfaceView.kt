@@ -34,7 +34,7 @@ class AlphaVideoGLSurfaceView @JvmOverloads constructor(context: Context, attr: 
     var mSurface: Surface? = null
 
     private val mSurfaceListener = object: IRender.SurfaceListener {
-        override fun onSurfacePrepared(surface: Surface) {
+        override fun onSurfacePrepared(surface: Surface, index: Int) {
             mSurface?.release()
             mSurface = surface
             isSurfaceCreated = true
@@ -58,7 +58,7 @@ class AlphaVideoGLSurfaceView @JvmOverloads constructor(context: Context, attr: 
         preserveEGLContextOnPause = true
     }
 
-    fun addOnSurfacePreparedListener() {
+    private fun addOnSurfacePreparedListener() {
         mRenderer?.setSurfaceListener(mSurfaceListener)
     }
 

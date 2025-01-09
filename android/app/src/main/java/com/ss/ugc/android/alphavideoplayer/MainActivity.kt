@@ -3,6 +3,7 @@ package com.ss.ugc.android.alphavideoplayer
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.widget.SeekBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.ss.ugc.android.alpha_player.IMonitor
@@ -28,10 +29,24 @@ class MainActivity : AppCompatActivity() {
 
         PermissionUtils.verifyStoragePermissions(this)
         initVideoGiftView()
+        findViewById<SeekBar>(R.id.seek_bar).setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                video_gift_view.seekTo(progress*1000L)
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                video_gift_view.pause()
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+//                video_gift_view.resume()
+            }
+
+        })
     }
 
     private fun initVideoGiftView() {
-        findViewById<VideoGiftView>(R.id.video_gift_view).initPlayerController(this, this, playerAction, monitor)
+        video_gift_view.initPlayerController(this, this, playerAction, monitor)
     }
 
     private val playerAction = object : IPlayerAction {
@@ -47,6 +62,10 @@ class MainActivity : AppCompatActivity() {
 
         override fun endAction() {
             Log.i(TAG, "call endAction")
+        }
+
+        override fun mediaPrepared() {
+            findViewById<View>(R.id.play_btn).isEnabled = true
         }
     }
 
@@ -66,7 +85,7 @@ class MainActivity : AppCompatActivity() {
         video_gift_view.detachView()
     }
 
-    fun playGift(v: View) {
+    fun prepareGift(v: View) {
         val testPath = getResourcePath()
         Log.i("dzy", "play gift file path : $testPath")
         if ("".equals(testPath)) {
@@ -74,6 +93,14 @@ class MainActivity : AppCompatActivity() {
                 .show()
         }
         video_gift_view.startVideoGift(testPath)
+    }
+
+    fun playGift(v:View) {
+        video_gift_view.play()
+    }
+
+    fun seekGift(v: View) {
+        video_gift_view.seekTo(29000)
     }
 
     private fun getResourcePath(): String {

@@ -21,22 +21,22 @@ import com.ss.ugc.android.alpha_player.model.AlphaVideoDirection
 import com.ss.ugc.android.alpha_player.model.AlphaVideoViewType
 import com.ss.ugc.android.alpha_player.model.Configuration
 import com.ss.ugc.android.alpha_player.model.DataSource
+import com.ss.ugc.android.alpha_player.model.MultiDataSource
 import com.ss.ugc.android.alpha_player.player.DefaultSystemPlayer
 import com.ss.ugc.android.alpha_player.player.IMediaPlayer
 import com.ss.ugc.android.alpha_player.player.PlayerState
-import com.ss.ugc.android.alpha_player.render.VideoRenderer
-import com.ss.ugc.android.alpha_player.widget.AlphaVideoGLSurfaceView
-import com.ss.ugc.android.alpha_player.widget.AlphaVideoGLTextureView
+import com.ss.ugc.android.alpha_player.render.MultiVideoRenderer
 import com.ss.ugc.android.alpha_player.widget.IAlphaVideoView
+import com.ss.ugc.android.alpha_player.widget.MultiVideoGLTextureView
 
 /**
  * created by dengzhuoyao on 2020/07/08
  */
-class PlayerController(
+class MultiPlayerController(
     val context: Context,
     owner: LifecycleOwner,
     private val alphaVideoViewType: AlphaVideoViewType,
-    private val alphaVideoDirection: AlphaVideoDirection,
+    alphaVideoDirection: AlphaVideoDirection,
     private var mediaPlayer: IMediaPlayer
 ) : IPlayerControllerExt, LifecycleEventObserver, Handler.Callback {
 
@@ -52,8 +52,8 @@ class PlayerController(
         const val RESET: Int = 9
         const val SEEK: Int = 10
 
-        fun get(configuration: Configuration, mediaPlayer: IMediaPlayer? = null): PlayerController {
-            return PlayerController(
+        fun get(configuration: Configuration, mediaPlayer: IMediaPlayer? = null): MultiPlayerController {
+            return MultiPlayerController(
                 configuration.context, configuration.lifecycleOwner,
                 configuration.alphaVideoViewType,
                 configuration.alphaVideoDirection,
@@ -62,16 +62,16 @@ class PlayerController(
         }
     }
 
-    private var suspendDataSource: DataSource? = null
-    var isPlaying: Boolean = false
+    private var suspendDataSource: MultiDataSource? = null
+    private var isPlaying: Boolean = false
     var playerState = PlayerState.NOT_PREPARED
-    var mMonitor: IMonitor? = null
-    var mPlayerAction: IPlayerAction? = null
+    private var mMonitor: IMonitor? = null
+    private var mPlayerAction: IPlayerAction? = null
     lateinit var alphaVideoView: IAlphaVideoView
 
-    var workHandler: Handler? = null
-    val mainHandler: Handler = Handler(Looper.getMainLooper())
-    var playThread: HandlerThread? = null
+    private var workHandler: Handler? = null
+    private val mainHandler: Handler = Handler(Looper.getMainLooper())
+    private var playThread: HandlerThread? = null
 
     private val mPreparedListener = object : IMediaPlayer.OnPreparedListener {
         override fun onPrepared() {
@@ -103,9 +103,8 @@ class PlayerController(
 
     private fun initAlphaView() {
         alphaVideoView = when (alphaVideoViewType) {
-            AlphaVideoViewType.GL_SURFACE_VIEW -> AlphaVideoGLSurfaceView(context, null)
-            AlphaVideoViewType.GL_TEXTURE_VIEW -> AlphaVideoGLTextureView(context, null)
-            AlphaVideoViewType.GL_MULTI_TEXTURE_VIEW -> throw IllegalArgumentException()
+            AlphaVideoViewType.GL_MULTI_TEXTURE_VIEW -> MultiVideoGLTextureView(context, null)
+            else -> throw IllegalArgumentException("not support view type")
         }
         alphaVideoView.let {
             val layoutParams = ViewGroup.LayoutParams(
@@ -114,7 +113,7 @@ class PlayerController(
             )
             it.setLayoutParams(layoutParams)
             it.setPlayerController(this)
-            it.setVideoRenderer(VideoRenderer(it, alphaVideoDirection))
+            it.setVideoRenderer(MultiVideoRenderer(it))
         }
     }
 
@@ -156,18 +155,26 @@ class PlayerController(
         }
     }
 
-    private fun getMessage(what: Int, obj: Any?): Message {
+    private fun getMessage(what: Int, obj: Any?, arg1: Int = 0): Message {
         val message = Message.obtain()
         message.what = what
+        message.arg1 = arg1
         message.obj = obj
         return message
     }
 
     override fun surfacePrepared(surface: Surface) {
-        sendMessage(getMessage(SURFACE_PREPARED, surface))
+        surfacePrepared(0, surface)
+    }
+
+    fun surfacePrepared(index: Int, surface: Surface) {
+        sendMessage(getMessage(SURFACE_PREPARED, surface, arg1 = index))
     }
 
     override fun start(dataSource: DataSource) {
+        if (dataSource !is MultiDataSource) {
+            throw IllegalArgumentException("just support MultiDataSource")
+        }
         if (dataSource.isValid()) {
             setVisibility(View.VISIBLE)
             sendMessage(getMessage(SET_DATA_SOURCE, dataSource))
@@ -245,9 +252,9 @@ class PlayerController(
     }
 
     @WorkerThread
-    private fun setDataSource(dataSource: DataSource) {
+    private fun setDataSource(dataSource: MultiDataSource) {
         try {
-            val portPath = dataSource.portPath
+            val portPath = dataSource.portPathList.first()
             if (portPath.startsWith("http://") || portPath.startsWith("https://")) {
                 setVideoFromNet(dataSource)
             } else {
@@ -263,16 +270,16 @@ class PlayerController(
         }
     }
 
-    private fun setVideoFromNet(dataSource: DataSource) {
+    private fun setVideoFromNet(dataSource: MultiDataSource) {
         mediaPlayer.reset()
         playerState = PlayerState.NOT_PREPARED
         val orientation = context.resources.configuration.orientation
         val isPort = android.content.res.Configuration.ORIENTATION_PORTRAIT == orientation
-        val dataPath =
-            (if (isPort) dataSource.portPath else dataSource.landPath)
+        val dataPathList =
+            (if (isPort) dataSource.portPathList else dataSource.landPathList)
         val scaleType = dataSource.getScaleType(orientation)
-        if (TextUtils.isEmpty(dataPath)) {
-            monitor(false, errorInfo = "dataPath is empty or File is not exists. path = $dataPath")
+        if (dataPathList.find { TextUtils.isEmpty(it) } != null) {
+            monitor(false, errorInfo = "dataPath is empty or File is not exists. path = $dataPathList")
             emitEndSignal()
             return
         }
@@ -280,7 +287,9 @@ class PlayerController(
             alphaVideoView.setScaleType(it)
         }
         mediaPlayer.setLooping(dataSource.isLooping)
-        mediaPlayer.setDataSource(dataPath, 0)
+        dataPathList.forEachIndexed { index, dataPath ->
+            mediaPlayer.setDataSource(dataPath, index)
+        }
         if (alphaVideoView.isSurfaceCreated()) {
             prepareAsync()
         } else {
@@ -289,15 +298,15 @@ class PlayerController(
     }
 
     @WorkerThread
-    private fun setVideoFromFile(dataSource: DataSource) {
+    private fun setVideoFromFile(dataSource: MultiDataSource) {
         mediaPlayer.reset()
         playerState = PlayerState.NOT_PREPARED
         val orientation = context.resources.configuration.orientation
 
-        val dataPath = dataSource.getPath(orientation)
+        val dataPathList = dataSource.getPathList(orientation)
         val scaleType = dataSource.getScaleType(orientation)
-        if (TextUtils.isEmpty(dataPath)) {
-            monitor(false, errorInfo = "dataPath is empty or File is not exists. path = $dataPath")
+        if (dataPathList.find { TextUtils.isEmpty(it) } != null) {
+            monitor(false, errorInfo = "dataPath is empty or File is not exists. path = $dataPathList")
             emitEndSignal()
             return
         }
@@ -305,7 +314,9 @@ class PlayerController(
             alphaVideoView.setScaleType(it)
         }
         mediaPlayer.setLooping(dataSource.isLooping)
-        mediaPlayer.setDataSource(dataPath, 0)
+        dataPathList.forEachIndexed { index, dataPath ->
+            mediaPlayer.setDataSource(dataPath, index)
+        }
         if (alphaVideoView.isSurfaceCreated()) {
             prepareAsync()
         } else {
@@ -368,13 +379,11 @@ class PlayerController(
     @WorkerThread
     private fun parseVideoSize() {
         val videoInfo = mediaPlayer.getVideoInfo(0)
-        val halfWidth = when (alphaVideoDirection) {
-            AlphaVideoDirection.LEFT, AlphaVideoDirection.RIGHT -> true
-            AlphaVideoDirection.TOP, AlphaVideoDirection.BOTTOM -> false
-        }
-        val videoWidth = if (halfWidth) videoInfo.videoWidth / 2 else videoInfo.videoWidth
-        val videoHeight = if (halfWidth) videoInfo.videoHeight else videoInfo.videoHeight / 2
-        alphaVideoView.measureInternal((videoWidth).toFloat(), (videoHeight).toFloat())
+        // mask视频是否size一致
+        val videoInfo2 = mediaPlayer.getVideoInfo(1)
+        val videoWidth = videoInfo.videoWidth
+        val videoHeight = videoInfo.videoHeight
+        alphaVideoView.measureInternal(videoWidth.toFloat(), videoHeight.toFloat())
 
         val scaleType = alphaVideoView.getScaleType()
         mainHandler.post {
@@ -391,12 +400,13 @@ class PlayerController(
 
                 SURFACE_PREPARED -> {
                     val surface = msg.obj as Surface
-                    mediaPlayer.setSurface(surface, msg.arg1)
+                    val index = msg.arg1
+                    mediaPlayer.setSurface(surface, index)
                     handleSuspendedEvent()
                 }
 
                 SET_DATA_SOURCE -> {
-                    val dataSource = msg.obj as DataSource
+                    val dataSource = msg.obj as MultiDataSource
                     setDataSource(dataSource)
                 }
 
@@ -471,7 +481,7 @@ class PlayerController(
 
                 SEEK -> {
                     when (playerState) {
-                        PlayerState.NOT_PREPARED,PlayerState.PREPARED,PlayerState.STARTED,PlayerState.PAUSED, PlayerState.STOPPED -> {
+                        PlayerState.PREPARED,PlayerState.STARTED,PlayerState.PAUSED, PlayerState.STOPPED -> {
                             mediaPlayer.seekTo(msg.obj as Long)
                         }
                         else -> {}

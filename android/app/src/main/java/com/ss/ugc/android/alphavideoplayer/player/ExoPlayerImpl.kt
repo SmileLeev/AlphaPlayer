@@ -4,10 +4,15 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import android.view.Surface
-import com.google.android.exoplayer2.*
-import com.google.android.exoplayer2.Player.*
-import com.google.android.exoplayer2.video.VideoSize
+import com.google.android.exoplayer2.C
+import com.google.android.exoplayer2.ExoPlayer
+import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.PlaybackException
+import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.Player.REPEAT_MODE_OFF
+import com.google.android.exoplayer2.Player.REPEAT_MODE_ONE
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
+import com.google.android.exoplayer2.video.VideoSize
 import com.ss.ugc.android.alpha_player.model.VideoInfo
 import com.ss.ugc.android.alpha_player.player.AbsPlayer
 
@@ -16,6 +21,9 @@ import com.ss.ugc.android.alpha_player.player.AbsPlayer
  * Date: 2023/3/28
  */
 class ExoPlayerImpl(private val context: Context) : AbsPlayer(context) {
+
+    private val TAG = "XB.ExoImpl"
+
     private lateinit var exoPlayer: ExoPlayer
 
     private var currVideoWidth: Int = 0
@@ -38,19 +46,38 @@ class ExoPlayerImpl(private val context: Context) : AbsPlayer(context) {
             errorListener?.onError(0, 0, "ExoPlayer on error: " + Log.getStackTraceString(error))
         }
 
-        @Deprecated("Deprecated in Java")
-        override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+        override fun onPlaybackStateChanged(playbackState: Int) {
             when (playbackState) {
                 Player.STATE_READY -> {
-                    if (playWhenReady) {
-                        preparedListener?.onPrepared()
-                    }
+                    playerReady()
                 }
+
                 Player.STATE_ENDED -> {
                     completionListener?.onCompletion()
                 }
+
                 else -> {}
             }
+        }
+
+        override fun onPositionDiscontinuity(
+            oldPosition: Player.PositionInfo,
+            newPosition: Player.PositionInfo,
+            reason: Int
+        ) {
+            Log.v(
+                TAG,
+                "src position: old: ${oldPosition.positionMs}, new: ${newPosition.positionMs}, reason: $reason"
+            )
+        }
+    }
+
+    private fun playerReady() {
+        if (exoPlayer.playbackState == Player.STATE_READY ) {
+            Log.w(TAG, "player duration=${exoPlayer.duration}")
+            preparedListener?.onPrepared()
+        } else {
+            Log.w(TAG, "player not ready")
         }
     }
 
@@ -68,7 +95,7 @@ class ExoPlayerImpl(private val context: Context) : AbsPlayer(context) {
         exoPlayer.repeatMode = REPEAT_MODE_ONE
     }
 
-    override fun setDataSource(dataPath: String) {
+    override fun setDataSource(dataPath: String, index: Int) {
         reset()
         val mediaItem = MediaItem.fromUri(Uri.parse(dataPath))
         exoPlayer.setMediaItem(mediaItem)
@@ -76,11 +103,21 @@ class ExoPlayerImpl(private val context: Context) : AbsPlayer(context) {
 
     override fun prepareAsync() {
         exoPlayer.prepare()
-        exoPlayer.playWhenReady = true
+        //exoPlayer.playWhenReady = false
     }
 
     override fun start() {
         exoPlayer.play()
+    }
+
+    override fun seekTo(position: Long) {
+        if (position >= 0) {
+            exoPlayer.seekTo(position)
+        }
+    }
+
+    override fun getCurrentPosition(): Long {
+        return exoPlayer.currentPosition
     }
 
     override fun pause() {
@@ -108,11 +145,11 @@ class ExoPlayerImpl(private val context: Context) : AbsPlayer(context) {
     override fun setScreenOnWhilePlaying(onWhilePlaying: Boolean) {
     }
 
-    override fun setSurface(surface: Surface) {
+    override fun setSurface(surface: Surface, index: Int) {
         exoPlayer.setVideoSurface(surface)
     }
 
-    override fun getVideoInfo(): VideoInfo {
+    override fun getVideoInfo(index: Int): VideoInfo {
         return VideoInfo(currVideoWidth, currVideoHeight)
     }
 

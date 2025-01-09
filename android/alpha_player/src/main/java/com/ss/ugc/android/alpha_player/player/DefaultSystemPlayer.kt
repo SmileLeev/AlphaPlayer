@@ -5,7 +5,6 @@ import android.media.MediaPlayer
 import android.text.TextUtils
 import android.view.Surface
 import com.ss.ugc.android.alpha_player.model.VideoInfo
-import java.lang.Exception
 
 /**
  * created by dengzhuoyao on 2020/07/07
@@ -41,11 +40,11 @@ class DefaultSystemPlayer : AbsPlayer() {
         }
     }
 
-    override fun setSurface(surface: Surface) {
+    override fun setSurface(surface: Surface, index: Int) {
         mediaPlayer.setSurface(surface)
     }
 
-    override fun setDataSource(dataPath: String) {
+    override fun setDataSource(dataPath: String, index: Int) {
         this.dataPath = dataPath
         mediaPlayer.setDataSource(dataPath)
     }
@@ -84,7 +83,11 @@ class DefaultSystemPlayer : AbsPlayer() {
         mediaPlayer.setScreenOnWhilePlaying(onWhilePlaying)
     }
 
-    override fun getVideoInfo(): VideoInfo {
+    override fun seekTo(position: Long) {
+        mediaPlayer.seekTo(position.toInt())
+    }
+
+    override fun getVideoInfo(index: Int): VideoInfo {
         if (TextUtils.isEmpty(dataPath)) {
             throw Exception("dataPath is null, please set setDataSource firstly!")
         }

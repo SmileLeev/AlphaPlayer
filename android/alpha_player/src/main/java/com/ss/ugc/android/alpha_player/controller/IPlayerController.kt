@@ -38,4 +38,8 @@ interface IPlayerController {
     fun getView(): View
 
     fun getPlayerType(): String
+
+    fun seekTo(position: Long)
+
+    fun currentPosition() : Long
 }

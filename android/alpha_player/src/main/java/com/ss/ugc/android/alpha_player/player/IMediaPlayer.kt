@@ -41,7 +41,7 @@ interface IMediaPlayer {
     /**
      * Sets the Surface to be used as the sink for the video portion of the media.
      */
-    fun setSurface(surface: Surface)
+    fun setSurface(surface: Surface, index: Int)
 
     /**
      * Sets the data source to use.
@@ -49,7 +49,7 @@ interface IMediaPlayer {
      * @param path the path of the file you want to play.
      */
     @Throws(IOException::class)
-    fun setDataSource(dataPath: String)
+    fun setDataSource(dataPath: String, index: Int)
 
     fun prepareAsync()
 
@@ -67,10 +67,14 @@ interface IMediaPlayer {
 
     fun setScreenOnWhilePlaying(onWhilePlaying: Boolean)
 
+    fun seekTo(position: Long)
+
     @Throws(Exception::class)
-    fun getVideoInfo(): VideoInfo
+    fun getVideoInfo(index: Int): VideoInfo
 
     fun getPlayerType(): String
+
+    fun getCurrentPosition(): Long
 
     /**
      * Interface definition for a callback to be invoked when playback of a

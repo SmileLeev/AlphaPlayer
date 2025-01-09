@@ -7,10 +7,10 @@ import com.google.gson.annotations.SerializedName
  */
 class ConfigModel {
     @SerializedName("landscape")
-    var landscapeItem: Item? = null
+    var landscapeItem: List<Item>? = null
 
     @SerializedName("portrait")
-    var portraitItem: Item? = null
+    var portraitItem: List<Item>? = null
 
     class Item {
         @SerializedName("path")
@@ -19,4 +19,5 @@ class ConfigModel {
         @SerializedName("align")
         var alignMode: Int = 0
     }
+
 }

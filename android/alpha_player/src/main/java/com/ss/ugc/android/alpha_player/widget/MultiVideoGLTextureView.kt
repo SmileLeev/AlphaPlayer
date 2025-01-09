@@ -6,13 +6,11 @@ import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
 import com.ss.ugc.android.alpha_player.controller.IPlayerControllerExt
+import com.ss.ugc.android.alpha_player.controller.MultiPlayerController
 import com.ss.ugc.android.alpha_player.model.ScaleType
 import com.ss.ugc.android.alpha_player.render.IRender
 
-/**
- * created by dengzhuoyao on 2020/07/07
- */
-class AlphaVideoGLTextureView @JvmOverloads constructor(context: Context, attr: AttributeSet? = null)
+class MultiVideoGLTextureView @JvmOverloads constructor(context: Context, attr: AttributeSet? = null)
     : GLTextureView(context, attr), IAlphaVideoView {
 
     private val GL_CONTEXT_VERSION = 2
@@ -28,21 +26,21 @@ class AlphaVideoGLTextureView @JvmOverloads constructor(context: Context, attr: 
     private var mScaleType: ScaleType = ScaleType.ScaleAspectFill
 
     private var mRenderer: IRender? = null
-    var mPlayerController: IPlayerControllerExt? = null
-    var mSurface: Surface? = null
+    var mPlayerController: MultiPlayerController? = null
+    var mSurfaces = mutableListOf<Surface?>()
 
     private val mSurfaceListener = object: IRender.SurfaceListener {
         override fun onSurfacePrepared(surface: Surface, index: Int) {
-            mSurface?.release()
-            mSurface = surface
+            //mSurface?.release()
+            mSurfaces.add(surface)
             isSurfaceCreated = true
-            mPlayerController?.surfacePrepared(surface)
+            mPlayerController?.surfacePrepared(index, surface)
             mPlayerController?.resume()
         }
 
         override fun onSurfaceDestroyed() {
-            mSurface?.release()
-            mSurface = null
+            mSurfaces.forEach { it?.release() }
+            mSurfaces.clear()
             isSurfaceCreated = false
         }
     }
@@ -77,7 +75,11 @@ class AlphaVideoGLTextureView @JvmOverloads constructor(context: Context, attr: 
     }
 
     override fun setPlayerController(playerController: IPlayerControllerExt) {
-        this.mPlayerController = playerController
+        if (playerController is MultiPlayerController) {
+            this.mPlayerController = playerController
+            return
+        }
+        throw IllegalArgumentException("playerController type is not support")
     }
 
     override fun setVideoRenderer(renderer: IRender) {
